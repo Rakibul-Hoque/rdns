@@ -142,10 +142,9 @@ export class Response {
         clearTimeout(transaction.timeout);
         transaction.status = "responded";
         transaction.response = this;
-
-        if (this.header.flags.rcode !== 0) {
-            this.log.warn(`DNS server returned ${this.header.flags.rcodeName}`);
-        }
+        
+        this.util.showHeaderInfo(this.header,this.log)
+        
 
         for (let i = 0; i < this.header.question_count; i++) {
             this.questions.push(this.readQuestion());

@@ -1,9 +1,7 @@
 import { createTimeout } from "../utils.js";
-
+import { TYPE_NAMES } from "../store.js";
 export class Request {
-    header;
-    queryBuff;
-    trxid;
+    
 
     constructor(options, log) {
         this.options = options;
@@ -35,15 +33,16 @@ export class Request {
         return Buffer.concat(parts);
     }
 
-    createQuery(domains) {
+    createQuery(domains, type) {
         this.header = this.createHeader(domains.length);
         this.domains = domains;
-
+        this.type = type;
         const questions = [];
         for (const domain of domains) {
             const name = this.encodeDomain(domain);
             const question = Buffer.alloc(4);
-            question.writeUInt16BE(this.options.type, 0); // QTYPE
+            // question.writeUInt16BE(this.options.type, 0); // QTYPE
+            question.writeUInt16BE(type, 0); // QTYPE
             question.writeUInt16BE(this.options.class, 2); // QCLASS IN
             questions.push(name);
             questions.push(question);
@@ -58,7 +57,8 @@ export class Request {
             domains: this.domains,
             request: this,
             timeout: createTimeout(
-                this.options,client,
+                this.options,
+                client,
                 this.domains,
                 this.trxid,
                 this.log
@@ -76,7 +76,7 @@ export class Request {
         this.log.infov(
             `${this.date} sent:`,
             this.queryBuff.length,
-            `bytes (${this.domains.join(", ")})`
+            `bytes (${this.domains.join(", ")}) ${TYPE_NAMES[this.type]}`
         );
 
         if (this.options.raw) {
