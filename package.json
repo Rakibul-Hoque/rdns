@@ -5,8 +5,12 @@
   "license": "MIT",
   "author": "rakib",
   "type": "module",
-  "main": "main.js",
+  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "bun build ./src/index.js --compile --target=bun-linux-x64 --outfile ./dist/rdns"
+  },
+  "devDependencies": {
+    "webpack": "^5.110.1",
+    "webpack-cli": "^7.2.3"
   }
 }
