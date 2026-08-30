@@ -1,4 +1,4 @@
-import { TYPES } from "./store.js";
+import { TYPES, CLASSES } from "./store.js";
 import { cliFail } from "./utils.js";
 
 export class Parser {
@@ -98,6 +98,13 @@ export class Parser {
                     this.options.json = true;
                     pointer++;
                     break;
+                case "--protocol":
+                    this.options.protocol = this.requireValue(
+                        pointer,
+                        "--protocol [tcp/udp]"
+                    );
+                    pointer++;
+                    break;
                 case "--timeout":
                     this.options.timeout = this.requireValue(
                         pointer,
@@ -130,6 +137,17 @@ export class Parser {
             );
         }
         options.type = type;
+        const cls = CLASSES[options.class.toUpperCase()];
+        if (!cls) {
+            cliFail(
+                `Invalid class: ${cls} \n Supported classes: ${Object.keys(CLASSES).join(", ")}`
+            );
+        }
+        options.class = cls;
+
+        options.protocol = options.protocol.toLowerCase();
+        if (options.protocol !== "tcp" && options.protocol !== "udp")
+            cliFail(`Invalid protocol: ${options.protocol} please tcp or udp`);
 
         let port = this.ensureNumber(
             options.port,
@@ -139,10 +157,11 @@ export class Parser {
             log.error("-p/--port [number] , must be a number between 0-65536");
             port = 53;
         }
-
-        log.infov(`Using UDP port ${port}`);
         options.port = port;
-        log.infov(`Using host ${options.host}`);
+
+        log.infov(
+            "Using String:", log.color("bold", `${options.protocol}://${options.host}:${options.port}`)
+        );
 
         options.timeout =
             this.ensureNumber(

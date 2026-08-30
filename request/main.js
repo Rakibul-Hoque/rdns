@@ -44,20 +44,21 @@ export class Request {
             const name = this.encodeDomain(domain);
             const question = Buffer.alloc(4);
             question.writeUInt16BE(this.options.type, 0); // QTYPE
-            question.writeUInt16BE(1, 2); // QCLASS IN
+            question.writeUInt16BE(this.options.class, 2); // QCLASS IN
             questions.push(name);
             questions.push(question);
         }
-        this.queryBuff = Buffer.concat([this.header, ...questions]);
+        return Buffer.concat([this.header, ...questions]);
     }
-    send(client, trxMap) {
+    send(buffer, client, trxMap) {
+        this.queryBuff = buffer;
         const data = {
             status: "pending",
             trxid: this.trxid,
             domains: this.domains,
             request: this,
             timeout: createTimeout(
-                this.options,
+                this.options,client,
                 this.domains,
                 this.trxid,
                 this.log
@@ -65,8 +66,12 @@ export class Request {
         };
         trxMap.set(this.trxid, data);
         this.date = Date.now();
-       
-        client.send(this.queryBuff, this.options.port, this.options.host);
+
+        if (this.options.protocol === "tcp") {
+            client.write(this.queryBuff);
+        } else if (this.options.protocol === "udp") {
+            client.send(this.queryBuff, this.options.port, this.options.host);
+        }
 
         this.log.infov(
             `${this.date} sent:`,

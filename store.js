@@ -10,7 +10,8 @@ export const COLORS = {
 };
 
 export const TYPES = {
-    A: 1,NS:2,
+    A: 1,
+    NS: 2,
     CNAME: 5,
     PTR: 12,
     MX: 15,
@@ -47,6 +48,11 @@ export const RCODE_NAMES = {
     4: "NOTIMP",
     5: "REFUSED"
 };
+export const CLASSES = {
+    IN: 1,
+    CH: 3,
+    HS: 4
+};
 export const CLASS_NAMES = {
     1: "IN",
     3: "CH",
@@ -55,10 +61,11 @@ export const CLASS_NAMES = {
 
 export const options = {
     type: "A",
-    ip_class: 1,
+    class: "IN",
     port: 53,
     host: "1.1.1.1",
     timeout: 60,
+    protocol: "udp",
     raw: false,
     batch: false,
     verbose: false,
@@ -90,6 +97,9 @@ export const manual = `
 
         --timeout <sec>     Request timeout
                             default: 60
+      
+        --protocol <tcp/udp> Transmission protocol
+                            default: udp
 
         --batch             Send all domains in one DNS packet
 

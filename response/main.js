@@ -8,6 +8,8 @@ export class Response {
     header = {};
     questions = [];
     answers = [];
+    authority = [];
+    additional = [];
 
     constructor(options, log) {
         this.options = options;
@@ -22,7 +24,7 @@ export class Response {
             qr: (flags >> 15) & 1, // query response 0 q 1 r
             opcode: (flags >> 11) & 0x0f, // o for query
             aa: (flags >> 10) & 1, // authoritive answer 0 for not authoritive 1 for aauthoritive
-            tc: (flags >> 9) & 1, // truncated 0 not not truncated 1 for truncated. if truncated user may retry through tcp
+            tc: (flags >> 9) & 1, // truncated 0 not truncated 1 for truncated. if truncated user may retry through tcp
             rd: (flags >> 8) & 1, // recursion desired 1 resulving it recursively (client requsest)
             ra: (flags >> 7) & 1, // recursion available 0 for unavailable 1 available (server response)
             z: (flags >> 4) & 0x07, // reserved bits
@@ -77,7 +79,7 @@ export class Response {
 
         return reader.call(this.util, start, end);
     }
-    readAnswer() {
+    readRecord() {
         const nameResult = this.util.readName(this.buffer, this.offset);
         this.offset = nameResult.nextOffset;
         this.log.debug(`decoding... ${nameResult.name}`);
@@ -146,14 +148,16 @@ export class Response {
         }
 
         for (let i = 0; i < this.header.question_count; i++) {
-            const question = this.readQuestion();
-            this.questions.push(question);
+            this.questions.push(this.readQuestion());
         }
-
         for (let i = 0; i < this.header.answer_count; i++) {
-            const answer = this.readAnswer();
-            if (!answer) break;
-            this.answers.push(answer);
+            this.answers.push(this.readRecord());
+        }
+        for (let i = 0; i < this.header.authority_count; i++) {
+            this.authority.push(this.readRecord());
+        }
+        for (let i = 0; i < this.header.additional_count; i++) {
+            this.additional.push(this.readRecord());
         }
 
         if (this.answers.length === 0)
