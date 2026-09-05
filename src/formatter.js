@@ -1,9 +1,12 @@
-export class ResponseFormatter {
-    constructor(log) {
+import { TYPE_NAMES } from "./store.js";
+
+export class Formatter {
+    constructor(options, log) {
+        this.options = options;
         this.log = log;
     }
 
-    format(response) {
+    formatResponse(response) {
         const {
             header,
             questions,
@@ -361,5 +364,135 @@ export class ResponseFormatter {
             default:
                 return this.log.color("gray", data?.raw ?? "<unknown>");
         }
+    }
+
+    formatTrace(result) {
+        this.log.space();
+
+        this.log.out(this.log.color("cyan", "========== DNS TRACE =========="));
+
+        this.log.out("  Target: " + this.log.color("bold", result.target));
+
+        this.log.out("  Type:   " + this.log.color("cyan", result.typeName));
+
+        this.log.out(
+            "  Status: " +
+                this.log.color(
+                    result.status === "ANSWER"
+                        ? "green"
+                        : result.status === "NXDOMAIN" ||
+                            result.status === "NODATA"
+                          ? "yellow"
+                          : "red",
+                    result.status
+                )
+        );
+
+        this.log.out("");
+
+        for (const hop of result.trace) {
+            this.formatTraceHop(hop);
+        }
+
+        this.log.out(
+            this.log.color("blue", "========== TRACE RESULT ==========")
+        );
+
+        this.log.out(
+            "  " +
+                this.log.color(
+                    result.status === "ANSWER"
+                        ? "green"
+                        : result.status === "NXDOMAIN" ||
+                            result.status === "NODATA"
+                          ? "yellow"
+                          : "red",
+                    result.message
+                )
+        );
+
+        this.log.out("  Hops:    " + this.log.color("yellow", result.hops));
+
+        this.log.out("  Queries: " + this.log.color("yellow", result.queries));
+
+        this.log.space();
+    }
+
+    formatTraceHop(hop) {
+        this.log.outmust(this.log.color("blue", `[${hop.hop}] ${hop.server}`));
+
+        this.log.out(
+            "  Query: " +
+                this.log.color("bold", hop.name) +
+                " " +
+                this.log.color("cyan", TYPE_NAMES[hop.type] ?? hop.type)
+        );
+
+        if (hop.error) {
+            this.log.out("  Error: " + this.log.color("red", hop.error));
+
+            this.log.space();
+            return;
+        }
+
+        const response = hop.response;
+
+        if (!response) {
+            this.log.out("  " + this.log.color("gray", "No response"));
+
+            this.log.space();
+            return;
+        }
+
+        const { header, answers, authority, additional } = response;
+
+        const f = header.flags;
+
+        this.log.out(
+            "  RCode: " +
+                this.log.color(
+                    f.rcode === 0 ? "green" : f.rcode === 3 ? "yellow" : "red",
+                    f.rcodeName
+                )
+        );
+
+        if (this.log.verbose) {
+            if (answers.length > 0)
+                this.formatVerboseRecords("Answers", answers);
+
+            if (authority.length > 0)
+                this.formatVerboseRecords("Authority", authority);
+
+            if (additional.length > 0)
+                this.formatVerboseRecords("Additional", additional);
+        } else {
+            if (answers.length > 0)
+                this.formatNormalRecords("Answers", answers);
+
+            if (authority.length > 0)
+                this.formatNormalRecords("Authority", authority);
+
+            if (additional.length > 0)
+                this.formatNormalRecords("Additional", additional);
+        }
+        this.log.space();
+    }
+
+    hexDump(buffer, headerTxt) {
+        if (!this.options.raw) return;
+        this.log.space();
+        this.log.out(headerTxt);
+        for (let offset = 0; offset < buffer.length; offset += 16) {
+            const chunk = buffer.subarray(offset, offset + 16);
+
+            const hex = [...chunk]
+                .map(byte => byte.toString(16).padStart(2, "0"))
+                .join(" ");
+            this.log.out(
+                offset.toString(16).padStart(4, "0"),
+                this.log.color("cyan", hex)
+            );
+        }
+        this.log.space();
     }
 }

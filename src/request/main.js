@@ -1,18 +1,20 @@
-import { createTimeout } from "../utils.js";
 import { TYPE_NAMES } from "../store.js";
-export class Request {
-    
 
-    constructor(options, log) {
+export class Request {
+    constructor(options, log, format) {
         this.options = options;
         this.log = log;
+        this.format = format;
     }
 
-    createHeader(qustion_count) {
+    createHeader(qustion_count, recursionDesired) {
         const buff = Buffer.alloc(12);
         this.trxid = Math.floor(Math.random() * Math.pow(2, 16));
         buff.writeUInt16BE(this.trxid, 0);
-        buff.writeUInt16BE(0x0100, 2); // flags
+
+        if (recursionDesired) buff.writeUInt16BE(0x0100, 2);
+        else buff.writeUInt16BE(0x0000, 2);
+        // flags
         buff.writeUInt16BE(qustion_count, 4); // qustion count I am sending 1 query
         buff.writeUInt16BE(0, 6); // answer count 0 becaus client dont answer
         buff.writeUInt16BE(0, 8); // number authority records 1 for this
@@ -33,8 +35,14 @@ export class Request {
         return Buffer.concat(parts);
     }
 
-    createQuery(domains, type) {
-        this.header = this.createHeader(domains.length);
+    createQuery(op) {
+        const {
+            domains,
+            type,
+            cls = this.options.class,
+            recursionDesired = true
+        } = op;
+        this.header = this.createHeader(domains.length, recursionDesired);
         this.domains = domains;
         this.type = type;
         const questions = [];
@@ -43,47 +51,22 @@ export class Request {
             const question = Buffer.alloc(4);
             // question.writeUInt16BE(this.options.type, 0); // QTYPE
             question.writeUInt16BE(type, 0); // QTYPE
-            question.writeUInt16BE(this.options.class, 2); // QCLASS IN
+            question.writeUInt16BE(cls, 2); // QCLASS IN
             questions.push(name);
             questions.push(question);
         }
         return Buffer.concat([this.header, ...questions]);
     }
-    send(buffer, client, trxMap) {
+
+    send(buffer, client, { host, port }) {
         this.queryBuff = buffer;
-        const data = {
-            status: "pending",
-            trxid: this.trxid,
-            domains: this.domains,
-            request: this,
-            timeout: createTimeout(
-                this.options,
-                client,
-                this.domains,
-                this.trxid,
-                this.log
-            )
-        };
-        trxMap.set(this.trxid, data);
+
         this.date = Date.now();
 
         if (this.options.protocol === "tcp") {
-            client.write(this.queryBuff);
+            client.write(buffer);
         } else if (this.options.protocol === "udp") {
-            client.send(this.queryBuff, this.options.port, this.options.host);
-        }
-
-        this.log.infov(
-            `${this.date} sent:`,
-            this.queryBuff.length,
-            `bytes (${this.domains.join(", ")}) ${TYPE_NAMES[this.type]}`
-        );
-
-        if (this.options.raw) {
-            this.log.space();
-            this.log.out("=== sent(raw) ===");
-            this.log.hexDump(this.queryBuff);
-            this.log.space();
+            client.send(buffer, port, host);
         }
     }
 }

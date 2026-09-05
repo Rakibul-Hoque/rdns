@@ -260,7 +260,7 @@ export class ResponseUtil {
     }
     showHeaderInfo(header, log) {
         if (header.flags.rcode !== 0) {
-            log.warn(`DNS server returned ${this.header.flags.rcodeName}`);
+            log.warn(`DNS server returned ${header.flags.rcodeName}`);
         }
         if (header.flags.tc === 1) {
             log.warn(`DNS response is Truncated try --tcp`);

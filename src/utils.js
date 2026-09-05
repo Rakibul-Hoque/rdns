@@ -1,21 +1,14 @@
-import { trxMap, cleanUp } from "./main.js";
 import { COLORS } from "./store.js";
 
 let conf = {
     color: true
 };
-let client;
-let options;
 
 export function setConf(options) {
     conf.color = options.color;
 }
-export function setClient(Client, Options) {
-    client = Client;
-    options = Options;
-}
 
-function logError(message) {
+export function logError(message) {
     if (!conf.color) {
         console.error("[ERROR]", message);
         return;
@@ -25,26 +18,19 @@ function logError(message) {
 
 export function fail(message) {
     logError(message);
-    if (client !== undefined && !client.destroyed) {
-        if (options.protocol === "tcp") client.end();
-        else client.close();
-    }
     process.exit(1);
 }
 export function cliFail(message) {
     logError(message);
-    if (client !== undefined && !client.destroyed) {
-        if (options.protocol === "tcp") client.end();
-        else client.close();
-    }
     process.exit(2);
 }
 
-export function serializeJson(options) {
-    const transactions = [...trxMap.values()].map(t => ({
+export function serializeJson(options, trxMang) {
+    const transactions = [...trxMang.values()].map(t => ({
         id: t.trxid,
         status: t.status,
         domains: t.domains,
+        server: t.server,
         responseDurationMs:
             t.request && t.response ? t.response.date - t.request.date : null,
         request: {
@@ -80,64 +66,26 @@ export function serializeJson(options) {
                   },
                   decoded: {
                       header: t.response.header,
-                      questions:
-                          t.response.questions.length === 0
-                              ? null
-                              : t.response.questions,
-                      answers:
-                          t.response.answers.length === 0
-                              ? null
-                              : t.response.answers,
-                      authority:
-                          t.response.authority.length === 0
-                              ? null
-                              : t.response.authority,
-                      additional:
-                          t.response.additional.length === 0
-                              ? null
-                              : t.response.additionals
+                      questions: t.response.questions,
+                      answers: t.response.answers,
+                      authority: t.response.authority,
+                      additional: t.response.additional
                   }
               }
             : null
     }));
-    const query = {
-        protocol: options.protocol,
-        host: options.host,
-        port: options.port,
-        type: options.type,
-        domains: options.domains
-    };
+
     return {
         version: 1,
         tool: {
             name: "rdns",
             author: "rakib"
         },
-        query,
+        query: {
+            protocol: options.protocol,
+            types: options.type,
+            domains: options.domains
+        },
         transactions: transactions.length === 0 ? null : transactions
     };
-}
-
-export function allTransactionsFinished() {
-    for (const transaction of trxMap.values()) {
-        if (transaction.status === "pending") {
-            return false;
-        }
-    }
-    return true;
-}
-
-export function createTimeout(options, client, domains, trxid, log) {
-    return setTimeout(() => {
-        log.error(
-            `DNS request timed out for ${domains.join(", ")} ` +
-                `(ID: ${trxid})`
-        );
-        const transaction = trxMap.get(trxid);
-        if (transaction) {
-            transaction.status = "timeout";
-        }
-        process.exitCode = 1;
-        if (allTransactionsFinished()) cleanUp(options, client, log);
-    }, options.timeout);
 }

@@ -1,7 +1,6 @@
 import { CLASS_NAMES, TYPE_NAMES, RCODE_NAMES } from "../store.js";
 import { fail } from "../utils.js";
 import { ResponseUtil } from "./utils.js";
-import { ResponseFormatter } from "./formatter.js";
 
 export class Response {
     offset = 12;
@@ -11,9 +10,10 @@ export class Response {
     authority = [];
     additional = [];
 
-    constructor(options, log) {
+    constructor(options, log, format) {
         this.options = options;
         this.log = log;
+        this.format = format;
     }
 
     readHeader() {
@@ -119,32 +119,14 @@ export class Response {
         };
     }
 
-    parse(buffer, trxMap) {
+    parse(buffer,  date) {
         this.buffer = buffer;
-        this.date = Date.now();
-        this.log.infov(`${this.date} received:`, buffer.length, "bytes");
-        if (this.options.raw) {
-            this.log.space();
-            this.log.out("=== received(raw) ===");
-            this.log.hexDump(buffer);
-            this.log.space();
-        }
+        this.date = date;
 
         this.readHeader();
         this.util = new ResponseUtil(this.buffer);
-        this.formatter = new ResponseFormatter(this.log);
 
-        const transaction = trxMap.get(this.header.trxid);
-        if (!transaction) {
-            this.log.error(`Unknown transaction ID: ${this.header.trxid}`);
-            return;
-        }
-        clearTimeout(transaction.timeout);
-        transaction.status = "responded";
-        transaction.response = this;
-        
-        this.util.showHeaderInfo(this.header,this.log)
-        
+        this.util.showHeaderInfo(this.header, this.log);
 
         for (let i = 0; i < this.header.question_count; i++) {
             this.questions.push(this.readQuestion());
@@ -159,11 +141,6 @@ export class Response {
             this.additional.push(this.readRecord());
         }
 
-        if (this.answers.length === 0)
-            this.log.info(
-                `No answer records returned ${this.questions.map(q => q.name).join(", ")}`
-            );
-        this.formatter.format(this);
-        transaction.status = "successful";
+        return this
     }
 }
