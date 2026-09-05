@@ -1,218 +1,284 @@
 RDNS
 
-A simple and lightweight DNS query tool built with JavaScript.
+RDNS is a simple and lightweight DNS query tool built with JavaScript. It runs on Node.js or Bun, supports multiple DNS record types, custom DNS servers, TCP/UDP transport, batch queries, raw packet output, JSON export, and DNS trace mode.
 
-RDNS can query DNS records using Node.js or Bun, with support for multiple record types, custom DNS servers, TCP/UDP transport, batch queries, raw packet output, JSON output, and DNS trace mode.
+---
 
 Features
 
-- DNS record queries
-- Multiple domains in a single command
-- Multiple record types
-- Custom DNS server and port
-- UDP and TCP DNS queries
-- DNS trace mode
-- Configurable trace hops and queries
-- Batch DNS queries
-- Raw DNS packet hex output
-- Verbose and debug output
-- Quiet mode
-- JSON output
-- JSON file export
-- ANSI color control
-- Runs with Node.js or Bun
-- Standalone Bun-compiled executable
+· Query DNS records for one or multiple domains in a single command
+· Support for all common record types (A, AAAA, NS, CNAME, PTR, MX, TXT, and more)
+· Custom DNS server and port selection
+· UDP and TCP transport protocols
+· DNS trace mode (recursive resolution) with configurable hop and query limits
+· Batch queries – send multiple domains in one DNS packet
+· Raw DNS packet hex dump for debugging
+· Verbose, debug, and quiet output modes
+· JSON output to stdout or file export
+· ANSI color support (optional disable)
+· Runs with Node.js or Bun
+· Standalone precompiled binaries for Linux (x64/arm64) and Windows (x64)
+
+---
 
 Requirements
 
-You can run RDNS using either:
+To run RDNS from source, you need either:
 
-- "Node.js" (https://nodejs.org/)
-- "Bun" (https://bun.sh/)
+· Node.js (version 14 or later recommended)
+· Bun (if you prefer Bun runtime)
+
+If you use a precompiled binary, no runtime is required.
+
+---
 
 Installation
 
+Option 1: Precompiled Binaries (Recommended)
+
+Download the appropriate release for your platform from the Releases page.
+
+File Platform / Purpose
+rdns-v1.0.0-linux-x64.zip Linux 64-bit executable
+rdns-v1.0.0-linux-arm64.zip Linux ARM64 executable
+rdns-v1.0.0-windows-x64.zip Windows 64-bit executable
+rdns-v1.0.0-js.zip Bundled source code (JavaScript)
+
+Extract the archive and run the binary directly.
+On Linux/macOS you may need to make it executable:
+
+```bash
+chmod +x rdns
+./rdns google.com
+```
+
+On Windows, simply run rdns.exe google.com.
+
+Option 2: From Source
+
 Clone the repository:
 
-git clone https://github.com/Rabiul-Hoque/rdns.git
-
-Enter the project directory:
-
+```bash
+git clone https://github.com/Rakibul-Hoque/rdns.git
 cd rdns
+```
 
-No additional installation is required for running the source directly.
+No additional dependencies are needed for running the source directly.
 
 Run with Node.js
 
+```bash
 node src/index.js google.com
+```
 
 Run with Bun
 
+```bash
 bun src/index.js google.com
+```
 
-Standalone Binary
-
-RDNS can also be distributed as a standalone executable compiled with Bun.
-
-The standalone binary contains the Bun runtime together with the RDNS application code, so users do not need to separately install Node.js or Bun to run the compiled binary.
-
-Example:
-
-./rdns google.com
-
-The exact binary name may vary depending on the target platform and build configuration.
+---
 
 Usage
 
+```text
 rdns [options] <domain...>
+```
 
 Basic Query
 
+```bash
 rdns google.com
+```
 
-Perform a standard DNS query.
+Performs a standard DNS query for the A record.
 
 Query Specific Record Types
 
+```bash
 rdns -t A,AAAA google.com
+```
 
-Query both IPv4 ("A") and IPv6 ("AAAA") records.
+Query both IPv4 (A) and IPv6 (AAAA) records.
 
 Use a Custom DNS Server
 
-rdns -t A,AAAA -h 1.1.1.1 google.com
+```bash
+rdns -t A,AAAA -H 1.1.1.1 google.com
+```
 
-Query "google.com" using the "1.1.1.1" DNS server.
+Query google.com using the 1.1.1.1 DNS server.
 
 Multiple Domains
 
+```bash
 rdns google.com github.com example.com
+```
 
 Query multiple domains in one command.
 
 Raw Packet Output
 
-rdns -r google.com github.com example.com
+```bash
+rdns -r google.com github.com
+```
 
 Display DNS packets as hexadecimal output.
 
 Query All Record Types
 
+```bash
 rdns --all github.com
+```
 
 Send queries for all supported DNS record types.
 
 TCP DNS Query
 
+```bash
 rdns --T google.com
+```
 
 Perform the DNS query over TCP.
 
 Verbose Output
 
+```bash
 rdns -v google.com
+```
 
 Enable verbose output.
 
-JSON Export
+JSON Output
 
+```bash
+rdns --json google.com
+```
+
+Dump serialized JSON to stdout.
+
+JSON Export to File
+
+```bash
 rdns --json-export out.json github.com
+```
 
-Save the query results as JSON.
+Save query results as JSON.
 
-All Types + TCP + Verbose + JSON
+All Types + TCP + Verbose + JSON Export
 
+```bash
 rdns --all -v -T --json-export out.json github.com
+```
 
-Query all supported record types over TCP with verbose output and export the results to a JSON file.
+Query all supported record types over TCP with verbose output, and export the results to a JSON file.
 
-DNS Trace
+DNS Trace Mode
 
-Enable trace mode with:
-
+```bash
 rdns --trace amazon.aws.com
+```
 
-You can also limit the maximum number of hops:
+Recursively trace DNS resolution from the root servers.
 
+Limit the maximum number of hops:
+
+```bash
 rdns --trace -t NS --hops 10 amazon.aws.com
+```
 
-Trace queries can also be limited:
+Limit the maximum number of queries:
 
+```bash
 rdns --trace --queries 20 amazon.aws.com
+```
+
+---
 
 Options
 
--t, --type <type>          DNS record type(s)
+Core Options
 
--h, --host <host>          DNS server
-                           default: 8.8.8.8
+Option Description Default
+-t, --type <type> DNS record type(s), comma-separated A
+-H, --host <host> DNS server IP or hostname 1.1.1.1
+-p, --port <port> DNS port 53
+--timeout <sec> Request timeout (seconds) 60
+--protocol <tcp/udp> Transmission protocol udp
+--class <class> DNS record class IN
+--all Send requests for all supported record types –
+--batch Send all domains in one DNS packet –
+-T, --tcp Perform DNS query over TCP (same as --protocol tcp) –
+--trace Enable trace mode (recursive resolution) –
+--hops <number> Maximum hops in trace mode 20
+--queries <number> Maximum queries in trace mode 50
 
--p, --port <port>          UDP port
-                           default: 53
+Output Options
 
-    --timeout <sec>        Request timeout
-                           default: 60
+Option Description
+-v, --verbose Verbose output
+--debug Debug output (more detailed)
+-r, --raw Hex dump of raw DNS packets
+-q, --quiet, --silent Minimal output
+--no-color Disable ANSI colors
+--json Dump serialized JSON to stdout
+--json-export <file> Save serialized JSON to a file
 
-    --protocol <tcp/udp>   Transmission protocol
-                           default: udp
+General Options
 
-    --all                  Send requests for all record types
+Option Description
+-h, --quickhelp Show quick help
+--help Show full help
+--version Show version
 
-    --batch                Send all domains in one DNS packet
-
--T, --tcp                  Perform DNS query over TCP
-
-    --trace                Enable trace mode
-
-    --hops <number>        Maximum hops in trace mode
-                           default: 20
-    
-    --queries <number>     Maximum queries in trace mode
-                           default: 50
-
--v, --verbose              Verbose output
-
-    --debug                Debug output
-
--r, --raw                  Hex dump packets
-
--q, --quiet                Minimal output
-
-    --no-color             Disable ANSI colors
-
-    --json                 Output serialized JSON
-
-    --json-export <file>   Save JSON output to a file
-
--h, --quickhelp            Show quick help
-
-    --help                 Show full help
-
-    --version              Show version
+---
 
 Defaults
 
-DNS Server:  8.8.8.8
-Port:        53
-Timeout:     60 seconds
-Protocol:    udp
-Hops:        20
-Queries:     50
+Parameter Default Value
+DNS Server 1.1.1.1
+Port 53
+Timeout 60 seconds
+Protocol udp
+Record Type A
+DNS Class IN
+Hops (trace) 20
+Queries (trace) 50
+
+---
+
 Flexible Option Placement
 
-RDNS options can be placed anywhere in the command. The parser automatically detects switches.
+Options can be placed anywhere in the command. The parser automatically distinguishes between options and domains.
 
-For example:
+Example:
 
-rdns -t AAAA -h 1.1.1.1 google.com -v -r github.com --timeout 20
+```bash
+rdns -t AAAA -H 1.1.1.1 google.com -v -r github.com --timeout 20
+```
 
-Options do not have to appear before the domains.
+This is equivalent to:
+
+```bash
+rdns google.com github.com -t AAAA -H 1.1.1.1 -v -r --timeout 20
+```
+
+---
+
+Notes
+
+· Multiple domains can be supplied in a single command.
+· Record types can be comma-separated (e.g., A,AAAA,NS).
+· Trace mode accepts only one domain and one record type.
+· -T, --tcp is equivalent to --protocol tcp.
+· --no-color disables ANSI color output (useful for scripts).
+· Batch mode (--batch) packs all domains into a single DNS query packet.
+
+---
 
 Project
 
-Repository:
-
-https://github.com/Rabiul-Hoque/rdns
+Repository: https://github.com/Rabiul-Hoque/rdns
 
 Version
 
