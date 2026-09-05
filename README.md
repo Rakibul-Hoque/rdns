@@ -136,7 +136,7 @@ Send queries for all supported DNS record types.
 TCP DNS Query
 
 ```bash
-rdns --T google.com
+rdns -T google.com
 ```
 
 Perform the DNS query over TCP.
