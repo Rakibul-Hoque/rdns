@@ -1,10 +1,10 @@
 import dgram from "node:dgram";
 import net from "node:net";
+import fs from "fs";
 import { TransactionManager } from "./transactionManager.js";
 import { Request } from "../request/main.js";
 import { TYPE_NAMES } from "../store.js";
-import { fail } from "../utils.js";
-import { createTimeout } from "./utils.js";
+import { fail, serializeJson } from "../utils.js";
 
 export class BaseController {
     constructor(options, log, format) {
@@ -24,6 +24,23 @@ export class BaseController {
 
     stop() {
         if (this.closed) return;
+
+        if (this.options.json || this.options.json_export) {
+            const json = serializeJson(this.options, this.trxMang);
+            if (this.options.json_export) {
+                try {
+                    fs.writeFileSync(
+                        this.options.json_export,
+                        JSON.stringify(json, null, 2)
+                    );
+                    this.log.info(
+                        `JSON output written to -> ${this.options.json_export}`
+                    );
+                } catch (err) {
+                    this.log.error(err.message);
+                }
+            } else this.log.outmust(JSON.stringify(json, null, 2));
+        }
 
         this.closed = true;
 
@@ -72,14 +89,15 @@ export class BaseController {
                 reject
             };
 
-            transaction.timeout = createTimeout(
-                this.options,
-                client,
-                request.domains,
-                request.trxid,
-                this.trxMang,
-                this.log
-            );
+            transaction.timeout = setTimeout(() => {
+                this.trxMang.timeout(
+                    request.trxid,
+                    `DNS request timed out for ${request.domains.join(", ")} ` +
+                        `(ID: ${request.trxid})`
+                );
+                process.exitCode = 1;
+                if (this.trxMang.allFinished()) this.stop();
+            }, this.options.timeout);
 
             this.trxMang.add(transaction);
 
@@ -90,7 +108,6 @@ export class BaseController {
                 packet.length,
                 `bytes (${request.domains.join(", ")}) ${TYPE_NAMES[request.type]}`
             );
-
             this.format.hexDump(packet, "=== sent(raw) ===");
         });
     }

@@ -1,16 +1,16 @@
 {
-  "name": "rdns",
-  "version": "1.0.0",
-  "description": "Dns analyzer tool ",
-  "license": "MIT",
-  "author": "rakib",
-  "type": "module",
-  "main": "index.js",
-  "scripts": {
-    "build": "bun build ./src/index.js --compile --target=bun-linux-x64 --outfile ./dist/rdns"
-  },
-  "devDependencies": {
-    "webpack": "^5.110.1",
-    "webpack-cli": "^7.2.3"
-  }
+    "name": "rdns",
+    "version": "1.1.0",
+    "description": "Dns analyzer tool",
+    "license": "MIT",
+    "author": "rakib",
+    "type": "module",
+    "main": "src/index.js",
+    "scripts": {
+        "build": "bun build ./src/index.js --compile --target=bun-linux-x64 --outfile ./dist/rdns"
+    },
+    "devDependencies": {
+        "webpack": "^5.110.1",
+        "webpack-cli": "^7.2.3"
+    }
 }

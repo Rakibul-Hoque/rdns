@@ -42,7 +42,7 @@ File Platform / Purpose
 rdns-v1.0.0-linux-x64.zip Linux 64-bit executable
 rdns-v1.0.0-linux-arm64.zip Linux ARM64 executable
 rdns-v1.0.0-windows-x64.zip Windows 64-bit executable
-rdns-v1.0.0-js.zip Bundled source code (JavaScript)
+rdns-v1.0.0-js.zip Source code (JavaScript)
 
 Extract the archive and run the binary directly.
 On Linux/macOS you may need to make it executable:
@@ -212,6 +212,7 @@ Option Description Default
 --trace Enable trace mode (recursive resolution) –
 --hops <number> Maximum hops in trace mode 20
 --queries <number> Maximum queries in trace mode 50
+--list <item> List available record types, classes
 
 Output Options
 
@@ -278,11 +279,11 @@ Notes
 
 Project
 
-Repository: https://github.com/Rabiul-Hoque/rdns
+Repository: https://github.com/Rakibul-Hoque/rdns.git
 
 Version
 
-rdns version 1.0.0
+rdns version 1.1.0
 
 License
 

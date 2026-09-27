@@ -1,23 +1,11 @@
 import { CLI_OPTIONS } from "./options.js";
-import {
-    CLI_EXAMPLES,
-    CLI_NOTES,
-   
-} from "./helpStore.js";
-import {
-    
-    VERSION_STRING,
-    VERSION
-} from "./version.js";
+import { CLI_EXAMPLES, CLI_NOTES, LIST_LIST } from "./store.js";
+import { VERSION_STRING, VERSION } from "./version.js";
+import { TYPES, CLASSES } from "../store.js";
 
 const getDefault = option => {
-    if (option.default === undefined) {
-        return null;
-    }
-
-    if (typeof option.default === "function") {
-        return option.default();
-    }
+    if (option.default === undefined) return null;
+    if (typeof option.default === "function") return option.default();
     return option.default;
 };
 
@@ -27,9 +15,8 @@ const formatFlags = option => {
         flags = `    ${option.flags}`;
     else flags = option.flags.join(", ");
 
-    if (option.valueName) {
-        return `${flags} ${option.valueName}`;
-    }
+    if (option.valueName) return `${flags} ${option.valueName}`;
+
     return flags;
 };
 
@@ -40,14 +27,15 @@ const formatOption = (option, width = 28) => {
 
     const defaultValue = getDefault(option);
 
-    if (option.type !== "boolean") {
-        if (defaultValue !== undefined && defaultValue !== null) {
-            line += `\n  ${"".padEnd(width)}` + `default: ${defaultValue}`;
-        }
-    }
-    if (option.note) {
-        line += `\n  ${"".padEnd(width)}` + option.note;
-    }
+    if (option.extra) line += `\n  ${"".padEnd(width)}` + option.extra;
+
+    if (
+        option.type !== "boolean" &&
+        defaultValue !== undefined &&
+        defaultValue !== null
+    )
+        line += `\n  ${"".padEnd(width)}` + `default: ${defaultValue}`;
+
     line += "\n";
 
     return line;
@@ -75,9 +63,7 @@ const renderExamples = () => {
 };
 
 const renderNotes = () => {
-    return ["Note:", "", ...CLI_NOTES.map(note => `  ${note}\n`), ""].join(
-        "\n"
-    );
+    return ["Note:", "", ...CLI_NOTES.map(note => `  ${note}`), ""].join("\n");
 };
 
 export const buildQuickHelp = () => {
@@ -120,3 +106,37 @@ export const buildHelp = () => {
         renderNotes()
     ].join("\n");
 };
+
+export const list = thing => {
+    if (thing === "types") {
+        return Object.keys(TYPES)
+            .map(
+                (type, i) => `${`   ${i})  ${type}`.padEnd(15)} ${TYPES[type]}`
+            )
+            .join("\n");
+    } else if (thing === "classes") {
+        return Object.keys(CLASSES)
+            .map((cls, i) => `${`   ${i})  ${cls}`.padEnd(15)} ${CLASSES[cls]}`)
+            .join("\n");
+    }
+};
+
+export function checkIfAskedInfo(options) {
+    if (options.help) {
+        console.log(buildHelp());
+        return true;
+    }
+    if (options.quickHelp) {
+        console.log(buildQuickHelp());
+        return true;
+    }
+    if (options.version) {
+        console.log(VERSION_STRING);
+        return true;
+    }
+    if (options.list) {
+        console.log(list(options.list));
+        return true;
+    }
+    return false;
+}

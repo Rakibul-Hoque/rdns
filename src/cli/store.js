@@ -5,13 +5,8 @@ export const CLI_EXAMPLES = [
     },
 
     {
-        command: "rdns -t A,AAAA google.com",
-        description: "Query IPv4 and IPv6 records"
-    },
-
-    {
         command: "rdns -t A,AAAA -H 1.1.1.1 google.com",
-        description: "Query using the 1.1.1.1 DNS server"
+        description: "Query IPv4 and IPv6 using the 1.1.1.1 DNS server"
     },
 
     {
@@ -20,23 +15,13 @@ export const CLI_EXAMPLES = [
     },
 
     {
-        command: "rdns -r google.com github.com",
-        description: "Query domains with raw hex packet output"
-    },
-
-    {
         command: "rdns --all github.com",
         description: "Query all supported DNS record types"
     },
 
     {
-        command: "rdns -T google.com",
-        description: "Perform a DNS query over TCP"
-    },
-
-    {
-        command: "rdns --json google.com",
-        description: "Dump serialized JSON to stdout"
+        command: "rdns -r -T google.com",
+        description: "Perform a DNS query over TCP with raw hex packet output"
     },
 
     {
@@ -57,11 +42,6 @@ export const CLI_EXAMPLES = [
     {
         command: "rdns --trace -t NS --hops 10 amazon.aws.com",
         description: "Trace NS records with a 10-hop limit"
-    },
-
-    {
-        command: "rdns --trace --queries 20 amazon.aws.com",
-        description: "Trace with a maximum of 20 queries"
     }
 ];
 
@@ -77,3 +57,5 @@ export const CLI_NOTES = [
     "# -T, --tcp is equivalent to --protocol tcp.",
     "# --no-color disables ANSI color output."
 ];
+
+export const LIST_LIST = ["types", "classes"];

@@ -29,19 +29,17 @@ export class Formatter {
 
             this.formatVerboseRecords("Answers", answers);
 
-            // Only show when records exist
             if (authority.length > 0) {
                 this.formatVerboseRecords("Authority", authority);
             }
-
             if (additional.length > 0) {
                 this.formatVerboseRecords("Additional", additional);
             }
         } else {
             this.formatNormalHeader(header, response);
+
             this.formatNormalRecords("Answers", answers);
 
-            // Only show when records exist
             if (authority.length > 0) {
                 this.formatNormalRecords("Authority", authority);
             }
@@ -60,37 +58,33 @@ export class Formatter {
         const statusColor =
             f.rcode === 0 ? "green" : f.rcode === 3 ? "yellow" : "red";
 
-        this.log.out(
+        const headerStr = [
             "  Status:    " +
-                `${this.log.color(statusColor, `${f.rcodeName} (${f.rcode})`)}`
-        );
+                `${this.log.color(statusColor, `${f.rcodeName} (${f.rcode})`)}`,
 
-        this.log.out(
             "  Questions: " +
-                `${this.log.color("yellow", header.question_count)}`
-        );
+                `${this.log.color("yellow", header.question_count)}`,
 
-        this.log.out(
-            "  Answers:   " + `${this.log.color("yellow", header.answer_count)}`
-        );
+            "  Answers:   " +
+                `${this.log.color("yellow", header.answer_count)}`,
 
-        this.log.out(
             "  Length:    " +
                 `${this.log.color("yellow", response.buffer.length)} Bytes`
-        );
+        ].join("\n");
+        this.log.out(headerStr);
     }
 
     formatNormalRecords(title, records) {
         this.log.space();
-        this.log.outmust(this.log.color("blue", `${title}:`));
+        this.log.outmust(this.log.color("blue", `  ${title}:`));
 
         if (records.length === 0) {
-            this.log.outmust(`  ${this.log.color("gray", "<none>")}`);
+            this.log.outmust(`  ${this.log.color("gray", "  <none>")}`);
             return;
         }
         records.forEach((record, index) => {
             this.log.outmust(
-                `  ${this.log.color("yellow", `${index + 1})`)} ` +
+                `    ${this.log.color("yellow", `${index + 1})`)} ` +
                     this.formatNormalAnswer(record)
             );
         });
@@ -182,78 +176,62 @@ export class Formatter {
 
     formatVerboseHeader(header, response) {
         const f = header.flags;
-
-        this.log.out("");
-        this.log.out(
-            "  Transaction ID: " + this.log.color("yellow", header.trxid)
-        );
-        this.log.out(
-            "  Flags:          " +
-                this.log.color("cyan", `0x${header.rawFlags}`)
-        );
-        this.log.out(`  QR:             ${f.qr}`);
-        this.log.out(`  Opcode:         ${f.opcode}`);
-
-        this.log.out(
-            "  Authoritative:  " +
-                this.log.color(f.aa ? "green" : "gray", Boolean(f.aa))
-        );
-
-        this.log.out(
-            "  Truncated:      " +
-                this.log.color(f.tc ? "yellow" : "gray", Boolean(f.tc))
-        );
-
-        this.log.out("  Recursion:      " + Boolean(f.rd));
-        this.log.out("  Recursion Avail:" + Boolean(f.ra));
-
         const rcodeColor =
             f.rcode === 0 ? "green" : f.rcode === 3 ? "yellow" : "red";
+        this.log.space();
+        const headerStr = [
+            "  Transaction ID: " + this.log.color("yellow", header.trxid),
 
-        this.log.out(
+            "  Flags:          " +
+                this.log.color("cyan", `0x${header.rawFlags}`),
+            `  QR:             ${f.qr}`,
+            `  Opcode:         ${f.opcode}`,
+
+            "  Authoritative:  " +
+                this.log.color(f.aa ? "green" : "gray", Boolean(f.aa)),
+
+            "  Truncated:      " +
+                this.log.color(f.tc ? "yellow" : "gray", Boolean(f.tc)),
+
+            "  Recursion:      " + Boolean(f.rd),
+            "  Recursion Avail:" + Boolean(f.ra),
+
             "  RCode:          " +
-                this.log.color(rcodeColor, `${f.rcodeName} (${f.rcode})`)
-        );
+                this.log.color(rcodeColor, `${f.rcodeName} (${f.rcode})`),
 
-        this.log.out(
             "  Questions:      " +
-                this.log.color("yellow", header.question_count)
-        );
+                this.log.color("yellow", header.question_count),
 
-        this.log.out(
-            "  Answers:        " + this.log.color("yellow", header.answer_count)
-        );
+            "  Answers:        " +
+                this.log.color("yellow", header.answer_count),
 
-        this.log.out(
             "  Authority:      " +
-                this.log.color("yellow", header.authority_count)
-        );
+                this.log.color("yellow", header.authority_count),
 
-        this.log.out(
             "  Additional:     " +
-                this.log.color("yellow", header.additional_count)
-        );
+                this.log.color("yellow", header.additional_count),
 
-        this.log.out(
             "  Length:         " +
                 this.log.color("yellow", response.buffer.length) +
                 " Bytes"
-        );
+        ].join("\n");
+
+        this.log.out(headerStr);
     }
 
     formatVerboseQuestions(questions) {
         this.log.space();
 
-        this.log.out(this.log.color("blue", "Questions:"));
+        this.log.out(this.log.color("blue", "  Questions:"));
 
         if (questions.length === 0) {
-            this.log.out(`  ${this.log.color("gray", "<none>")}`);
+            this.log.out(`    ${this.log.color("gray", "<none>")}`);
             return;
         }
 
         questions.forEach((question, index) => {
             this.log.out(
-                `  ${this.log.color("yellow", `${index + 1})`)} ` +
+                `    ${this.log.color("yellow", `${index + 1})`)} ` +
                     `${this.log.color("bold", question.name)} ` +
                     `${this.log.color(
                         "cyan",
@@ -270,7 +248,7 @@ export class Formatter {
     formatVerboseRecords(title, records) {
         this.log.space();
 
-        this.log.out(this.log.color("blue", `${title}:`));
+        this.log.out(this.log.color("blue", `  ${title}:`));
 
         if (records.length === 0) {
             this.log.out(`  ${this.log.color("gray", "<none>")}`);
@@ -278,10 +256,11 @@ export class Formatter {
         }
         records.forEach((record, index) => {
             this.log.out(
-                `\n  ${this.log.color("yellow", `${title.slice(0, -1)} #${index + 1}`)}`
+                `    ${this.log.color("yellow", `${title.slice(0, -1)} #${index + 1}`)}`
             );
 
-            this.formatVerboseAnswer(record);
+            this.log.out(this.formatVerboseAnswer(record));
+            if (records.length !== index + 1) this.log.space();
         });
     }
 
@@ -297,21 +276,21 @@ export class Formatter {
             data
         } = answer;
 
-        this.log.out("     Name:      " + this.log.color("bold", name));
+        return [
+            "       Name:      " + this.log.color("bold", name),
 
-        this.log.out(
-            "     Type:      " + this.log.color("cyan", `${typeName} (${type})`)
-        );
+            "       Type:      " +
+                this.log.color("cyan", `${typeName} (${type})`),
 
-        this.log.out(
-            "     Class:     " + this.log.color("gray", `${className} (${cls})`)
-        );
+            "       Class:     " +
+                this.log.color("gray", `${className} (${cls})`),
 
-        this.log.out("     TTL:       " + this.log.color("yellow", ttl));
+            "       TTL:       " + this.log.color("yellow", ttl),
 
-        this.log.out("     RDLENGTH:  " + this.log.color("yellow", rdlength));
+            "       RDLENGTH:  " + this.log.color("yellow", rdlength),
 
-        this.log.out("     RDATA:     " + this.formatData(answer));
+            "       RDATA:     " + this.formatData(answer)
+        ].join("\n");
     }
 
     formatData(answer) {
@@ -419,17 +398,23 @@ export class Formatter {
     }
 
     formatTraceHop(hop) {
-        this.log.outmust(this.log.color("blue", `[${hop.hop}] ${hop.server}`));
-
+        this.log.outmust(
+            this.log.color(
+                "blue",
+                `[${hop.hop}] ${hop.server} ${hop.serverDomain ? `(${hop.serverDomain})` : ""}`
+            )
+        );
+this.log.out("  HopKind: " + hop.traceKind);
         this.log.out(
-            "  Query: " +
+            "  Query:   " +
                 this.log.color("bold", hop.name) +
                 " " +
                 this.log.color("cyan", TYPE_NAMES[hop.type] ?? hop.type)
         );
+        
 
         if (hop.error) {
-            this.log.out("  Error: " + this.log.color("red", hop.error));
+            this.log.out("  Error:   " + this.log.color("red", hop.error));
 
             this.log.space();
             return;
@@ -449,7 +434,7 @@ export class Formatter {
         const f = header.flags;
 
         this.log.out(
-            "  RCode: " +
+            "  RCode:   " +
                 this.log.color(
                     f.rcode === 0 ? "green" : f.rcode === 3 ? "yellow" : "red",
                     f.rcodeName

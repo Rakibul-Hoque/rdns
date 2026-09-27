@@ -1,7 +1,7 @@
 import { BaseController } from "./baseController.js";
 import { TYPE_NAMES, RCODE_NAMES, ROOT_SERVERS } from "../store.js";
 import { fail } from "../utils.js";
-import { cleanUp } from "./utils.js";
+import { DEFAULT } from "../cli/utils.js";
 import { Response } from "../response/main.js";
 
 export class TraceController extends BaseController {
@@ -36,8 +36,7 @@ export class TraceController extends BaseController {
 
             this.format.formatTrace(result);
 
-cleanUp(this.options, null, this. trxMang, this
-.log)
+            this.stop();
 
             return result;
         } finally {
@@ -119,22 +118,64 @@ cleanUp(this.options, null, this. trxMang, this
     }
 
     async runTrace() {
-        let server = this.getRootServer();
-        let name = this.target;
+        const server = this.getRootServer();
 
+        try {
+            const result = await this.traceName(
+                this.target,
+                this.type,
+                server,
+                {
+                    serverDomain: "root",
+                    traceKind: "main",
+                    visitedServers: this.visitedServers,
+                    visitedNames: this.visitedNames
+                }
+            );
+
+            return this.finish(result.status, result.message, result.response);
+        } catch (error) {
+            const status =
+                error.code === "TRACE_LIMIT"
+                    ? "OUT_OF_LIMIT"
+                    : error.code === "TRACE_LOOP"
+                      ? "LOOP"
+                      : "TRACE_FAILED";
+
+            return this.finish(status, error.message);
+        }
+    }
+    async traceName(
+        name,
+        type,
+        server,
+        {
+            serverDomain = "root",
+            traceKind = "main",
+            visitedServers = new Set(),
+            visitedNames = new Set()
+        } = {}
+    ) {
         while (!this.finished) {
             const limitReachedMsg = this.checkLimits();
+
             if (limitReachedMsg) {
-                this.log.error(limitReachedMsg);
-                return this.finish("OUT_OF_LIMITE", limitReachedMsg);
+                const error = new Error(limitReachedMsg);
+                error.code = "TRACE_LIMIT";
+                throw error;
             }
+
             const key = this.normalize(server);
 
-            if (this.visitedServers.has(key)) {
-                return this.finish("LOOP", `Trace loop detected at ${server}`);
+            if (visitedServers.has(key)) {
+                const error = new Error(`Trace loop detected at ${server}`);
+
+                error.code = "TRACE_LOOP";
+                throw error;
             }
 
-            this.visitedServers.add(key);
+            visitedServers.add(key);
+
             this.hop++;
 
             const client = this.createSocket({
@@ -157,7 +198,7 @@ cleanUp(this.options, null, this. trxMang, this
                     },
                     {
                         domains: [name],
-                        type: this.type,
+                        type,
                         recursionDesired: false
                     }
                 );
@@ -165,30 +206,38 @@ cleanUp(this.options, null, this. trxMang, this
                 this.recordHop({
                     hop: this.hop,
                     server,
+                    serverDomain,
                     name,
-                    type: this.type,
+                    type,
+                    traceKind,
                     error: error.message
                 });
 
+                throw error;
+            } finally {
                 client.destroy?.();
-
-                return this.finish("TIMEOUT", `${server} did not respond`);
             }
-
-            client.destroy?.();
 
             this.recordHop({
                 hop: this.hop,
                 server,
+                serverDomain,
                 name,
-                type: this.type,
+                type,
+                traceKind,
                 response
             });
 
-            const result = this.analyze(response, name);
+            const result = this.analyze(response, name, type, visitedNames);
 
-            if (result.done)
-                return this.finish(result.status, result.message, response);
+            if (result.done) {
+                return {
+                    ...result,
+                    response,
+                    server,
+                    serverDomain
+                };
+            }
 
             if (result.kind === "cname") {
                 name = result.name;
@@ -196,29 +245,80 @@ cleanUp(this.options, null, this. trxMang, this
             }
 
             if (result.kind === "referral") {
-                const next = this.nextServer(result.nameservers, response);
+                let next = this.nextServer(
+                    result.nameservers,
+                    response,
+                    visitedServers
+                );
 
-                if (!next) {
-                    return this.finish(
-                        "NO_GLUE",
-                        "No usable nameserver address found",
-                        response
-                    );
+                if (next) {
+                    server = next.address;
+                    serverDomain = next.domain;
+
+                    continue;
                 }
 
-                server = next;
-                continue;
+                for (const nameserver of result.nameservers) {
+                    try {
+                        next = await this.traceNameserver(nameserver);
+
+                        if (next) {
+                            server = next.address;
+                            serverDomain = next.domain;
+                            break;
+                        }
+                    } catch (error) {
+                        this.log.infov(
+                            `failed to resolve nameserver ${nameserver}: ${error.message}`
+                        );
+                    }
+                }
+
+                if (next) {
+                    continue;
+                }
+
+                throw new Error(`Could not resolve any nameserver`);
             }
 
-            return this.finish(
-                "UNKNOWN",
-                "Could not determine the next trace step",
-                response
-            );
+            throw new Error("Could not determine the next trace step");
         }
     }
 
-    analyze(response, name) {
+    async traceNameserver(name) {
+        const server = this.getRootServer();
+
+        const result = await this.traceName(
+            name,
+            1, // A
+            server,
+            {
+                serverDomain: "root",
+                traceKind: "nameserver",
+                visitedServers: new Set(),
+                visitedNames: new Set()
+            }
+        );
+
+        if (result.status !== "ANSWER") {
+            throw new Error(`Could not resolve nameserver ${name}`);
+        }
+
+        const answer = result.response.answers.find(
+            record => record.type === 1 && this.sameName(record.name, name)
+        );
+
+        if (!answer?.data?.address) {
+            throw new Error(`Nameserver ${name} has no A address`);
+        }
+
+        return {
+            address: answer.data.address,
+            domain: name
+        };
+    }
+
+    analyze(response, name, type, visitedNames) {
         if (!response?.header) {
             return {
                 done: true,
@@ -257,8 +357,7 @@ cleanUp(this.options, null, this. trxMang, this
         }
 
         const answer = response.answers.find(
-            record =>
-                record.type === this.type && this.sameName(record.name, name)
+            record => record.type === type && this.sameName(record.name, name)
         );
 
         if (answer) {
@@ -286,7 +385,7 @@ cleanUp(this.options, null, this. trxMang, this
 
             const key = this.normalize(target);
 
-            if (this.visitedNames.has(key)) {
+            if (visitedNames.has(key)) {
                 return {
                     done: true,
                     status: "CNAME_LOOP",
@@ -294,7 +393,7 @@ cleanUp(this.options, null, this. trxMang, this
                 };
             }
 
-            this.visitedNames.add(key);
+            visitedNames.add(key);
 
             return {
                 done: false,
@@ -320,18 +419,18 @@ cleanUp(this.options, null, this. trxMang, this
             return {
                 done: true,
                 status: "NODATA",
-                message: `${name} has no ${TYPE_NAMES[this.type] ?? this.type} record`
+                message: `${name} has no ${TYPE_NAMES[type] ?? type} record`
             };
         }
 
         return {
             done: true,
             status: "NODATA",
-            message: `No ${TYPE_NAMES[this.type] ?? this.type} answer returned`
+            message: `No ${TYPE_NAMES[type] ?? type} answer returned`
         };
     }
 
-    nextServer(nameservers, response) {
+    nextServer(nameservers, response, visited = this.visitedServers) {
         for (const name of nameservers) {
             const glue = response.additional.filter(
                 record =>
@@ -339,22 +438,17 @@ cleanUp(this.options, null, this. trxMang, this
                     this.sameName(record.name, name)
             );
 
-            /*
-             * Prefer A when using udp4.
-             */
             const a = glue.find(record => record.type === 1);
 
             if (
                 a?.data?.address &&
-                !this.visitedServers.has(this.normalize(a.data.address))
+                !visited.has(this.normalize(a.data.address))
             ) {
-                return a.data.address;
+                return {
+                    address: a.data.address,
+                    domain: name
+                };
             }
-
-            /*
-             * If your BaseController later supports udp6,
-             * AAAA can be selected here too.
-             */
         }
 
         return null;
@@ -374,6 +468,7 @@ cleanUp(this.options, null, this. trxMang, this
         }
 
         this.queryCount++;
+
         return undefined;
     }
 
@@ -388,6 +483,9 @@ cleanUp(this.options, null, this. trxMang, this
     }
 
     getRootServer() {
+        if (this.options.host !== DEFAULT.host) {
+            return this.options.host;
+        }
         return this.rootServers[
             Math.floor(Math.random() * this.rootServers.length)
         ];

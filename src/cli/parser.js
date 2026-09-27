@@ -1,8 +1,15 @@
-import { TYPES, CLASSES, ALL_TYPES, TYPE_NAMES } from "../store.js";
+import {
+    TYPES,
+    ALL_TYPES,
+    TYPE_NAMES,
+    CLASSES,
+    ALL_CLASSES
+} from "../store.js";
 
 import { createFlagMap, createDefaults, DEFAULT } from "./utils.js";
 
 import { cliFail } from "./utils.js";
+import { LIST_LIST } from "./store.js";
 
 export class Parser {
     constructor(options = createDefaults()) {
@@ -31,9 +38,11 @@ export class Parser {
     }
 
     parse(args) {
+        const options = this.options;
+
         if (args.length === 0) {
-            this.options.quickHelp = true;
-            return this.options;
+            options.quickHelp = true;
+            return options;
         }
 
         for (let pointer = 0; pointer < args.length; pointer++) {
@@ -41,43 +50,40 @@ export class Parser {
 
             const option = this.CLI_FLAG_MAP.get(arg);
 
-            // Not an option => domain
             if (!option) {
                 if (arg.startsWith("-")) {
                     cliFail(`Unknown option ${arg}`);
                 }
 
-                this.options.domains.push(arg);
+                options.domains.push(arg);
                 continue;
             }
 
-            // Boolean option
             if (option.type === "boolean") {
                 if (option.set !== undefined) {
-                    this.options[option.key] = option.set;
+                    options[option.key] = option.set;
                 } else {
-                    this.options[option.key] = true;
+                    options[option.key] = !option.default;
                 }
-
                 continue;
             }
 
-            // Option requires a value
             const value = this.requireValue(
                 args,
                 pointer,
                 `${option.flags.join("/")} ${option.valueName}`
             );
 
-            this.options[option.key] = value;
-
+            options[option.key] = value;
             pointer++;
         }
 
-        return this.options;
+        return options;
     }
 
     validate(options, log) {
+        if (this.validateHelps(options, log)) return options;
+
         if (options.verbose && options.silent) {
             cliFail(
                 "-v/--verbose and -q/--quiet/--silent cannot be used together"
@@ -99,7 +105,7 @@ export class Parser {
             if (!type) {
                 cliFail(
                     `Invalid type: ${typeName}\n` +
-                        `Supported types: ${Object.keys(TYPES).join(", ")}`
+                        `Supported types: ${ALL_TYPES}`
                 );
             }
 
@@ -111,7 +117,7 @@ export class Parser {
         if (!cls) {
             cliFail(
                 `Invalid class: ${options.class}\n` +
-                    `Supported classes: ${Object.keys(CLASSES).join(", ")}`
+                    `Supported classes: ${ALL_CLASSES}`
             );
         }
 
@@ -160,6 +166,42 @@ export class Parser {
         this.validateTrace(options);
 
         return options;
+    }
+
+    validateHelps(options, log) {
+        if (options.list && !LIST_LIST.includes(options.list)) {
+            cliFail(
+                `Invalid list item: ${options.list}\n` +
+                    `Supported list items: ${LIST_LIST.join(", ")}`
+            );
+        }
+
+        if (
+            options.help ||
+            options.version ||
+            options.quickHelp ||
+            options.list
+        ) {
+            if (options.domains.length >= 1)
+                log.warn(
+                    "You should not provide any domain(s) with help options"
+                );
+            if (
+                !options.color ||
+                options.raw ||
+                options.json ||
+                options.silent ||
+                options.verbose ||
+                options.debug
+            )
+                log.warn(
+                    "You should not press any switch(es) with help options"
+                );
+
+            return true;
+        }
+
+        return false;
     }
 
     validateTrace(options) {

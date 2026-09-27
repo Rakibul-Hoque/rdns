@@ -1,6 +1,5 @@
 import { BaseController } from "./baseController.js";
 import { fail } from "../utils.js";
-import { cleanUp, createTimeout } from "./utils.js";
 import { TYPE_NAMES } from "../store.js";
 import { Request } from "../request/main.js";
 import { Response } from "../response/main.js";
@@ -48,11 +47,11 @@ export class NormalController extends BaseController {
                     this.format.hexDump(frame, "=== received(raw) ===");
 
                     try {
-                    this.processResponse(dnsMessage, date);
-                                    } catch (error) {
-                    fail(`DNS parsing failed: ${error.message}`);
-                    return;
-                }
+                        this.processResponse(dnsMessage, date);
+                    } catch (error) {
+                        fail(`DNS parsing failed: ${error.message}`);
+                        return;
+                    }
                 }
             });
 
@@ -65,11 +64,11 @@ export class NormalController extends BaseController {
                 this.log.infov(`${date} received:`, buffer.length, "bytes");
                 this.format.hexDump(buffer, "=== received(raw) ===");
 
-                 try {
-                this.processResponse(buffer, date);
-                            } catch (error) {
-                                fail(`DNS parsing failed: ${error.message}`);
-                            }
+                try {
+                    this.processResponse(buffer, date);
+                } catch (error) {
+                    fail(`DNS parsing failed: ${error.message}`);
+                }
             });
             this.client.on("error", err => {
                 fail(`udp socket error: ${err.message}`);
@@ -86,9 +85,8 @@ export class NormalController extends BaseController {
         this.trxMang.responded(response);
         this.format.formatResponse(response);
 
-
         if (this.trxMang.allFinished()) {
-            cleanUp(this.options, this.client, this.trxMang, this.log);
+            this.stop();
         }
     }
 
@@ -104,8 +102,7 @@ export class NormalController extends BaseController {
                     type,
                     recursionDesired: true
                 }).catch(error => {
-                    fail(error.message);
-                    throw error;
+                    this.log.error(error.message);
                 });
             }
         }

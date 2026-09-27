@@ -58,7 +58,7 @@ export const CLI_OPTIONS = {
             flags: ["--all"],
             type: "boolean",
             description: "Send requests for all record types",
-            note: "Like: -t A,AAAA,NS,CNAME,PTR,...",
+            extra: "Like: -t A,AAAA,NS,CNAME,PTR,...",
             default: false
         },
 
@@ -72,7 +72,7 @@ export const CLI_OPTIONS = {
 
         {
             key: "protocol",
-            flags: ["-T","--tcp"],
+            flags: ["-T", "--tcp"],
             type: "boolean",
             description: "Perform DNS query over TCP",
             set: "tcp"
@@ -91,8 +91,7 @@ export const CLI_OPTIONS = {
             flags: ["--hops"],
             type: "value",
             valueName: "<number>",
-            description: "Maximum hops",
-            note: "Used in trace mode",
+            description: "Maximum hops, used in trace mode",
             default: 20
         },
 
@@ -101,8 +100,7 @@ export const CLI_OPTIONS = {
             flags: ["--queries"],
             type: "value",
             valueName: "<number>",
-            description: "Maximum queries",
-            note: "Used in trace mode",
+            description: "Maximum queries, used in trace mode",
             default: 50
         }
     ],
@@ -146,7 +144,7 @@ export const CLI_OPTIONS = {
             type: "boolean",
             description: "Disable ANSI colors",
             default: true,
-            value: false
+            set: false
         },
 
         {
@@ -163,7 +161,6 @@ export const CLI_OPTIONS = {
             type: "value",
             valueName: "<file>",
             description: "Save serialized JSON to a file"
-        
         }
     ],
 
@@ -182,13 +179,20 @@ export const CLI_OPTIONS = {
             description: "Show full help",
             default: false
         },
-
         {
             key: "version",
             flags: ["--version"],
             type: "boolean",
             description: "Show version",
             default: false
+        },
+        {
+            key: "list",
+            flags: ["--list"],
+            type: "value",
+            valueName: "<item>",
+            description: "Show list of supported types or classes",
+            extra: "E.g. --list types"
         }
     ]
 };

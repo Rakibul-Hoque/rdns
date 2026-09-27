@@ -40,7 +40,11 @@ export const CLASSES = {
     IN: 1,
     CH: 3,
     HS: 4
-};
+}; 
+
+export const ALL_CLASSES  = Object.keys(CLASSES).join(",");
+
+
 export const CLASS_NAMES = Object.fromEntries(
     Object.entries(CLASSES).map(([name, code]) => [code, name])
 );

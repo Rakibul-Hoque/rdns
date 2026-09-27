@@ -1,4 +1,5 @@
 import { COLORS } from "./store.js";
+import { VERSION } from "./cli/version.js";
 
 let conf = {
     color: true
@@ -76,7 +77,7 @@ export function serializeJson(options, trxMang) {
     }));
 
     return {
-        version: 1,
+        version: VERSION,
         tool: {
             name: "rdns",
             author: "rakib"
